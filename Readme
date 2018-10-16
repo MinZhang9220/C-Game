@@ -1,0 +1,27 @@
+How to play the game:
+
+
+Rule:
+Winner is the first player to get an unbroken row of four leds horizontally,vertically,or diagonally.
+
+Tie could be make when all the matrix is fulled with out any player connected to 4.
+
+
+
+Choose led:
+Press the navigational switch up(North): row ++.
+press the navigational switch down(South) : row--;
+Press the navigational switch right(East): column ++.
+press the navigational switch left(West) : column--;
+press the navigational switch push: flash the corresponding on another player's board.
+
+Display led matrix:
+Setted led will not flash.
+Received led will flash.
+
+Others:
+If player want to set unavailable led(The led is setted or received),when press the navigational switch push, the led will not flash on another player's board.
+
+
+
+
