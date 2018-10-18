@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define MAX_GRID 35
 
 /* Led matrix configuration structure.  */
 typedef struct grid_s
@@ -20,5 +21,11 @@ typedef struct grid_s
     bool received;
     bool navswitched;
 } Grid;
+
+/** Initialize matrix grid.
+@return matrix_grid*/
+
+Grid* initialize_matrix_grid(void);
+
 
 #endif
