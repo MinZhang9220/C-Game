@@ -1,5 +1,7 @@
-How to play the game:
+Game name: Connect four
 
+How to play the game:
+1: Use the navigation switch, press north or south to change row,press west and east to change column, press push to send the setted led to another player's board.If this led is not setted, it will flash on another player's board.
 
 Rule:
 Winner is the first player to get an unbroken row of four leds horizontally,vertically,or diagonally.
@@ -21,6 +23,9 @@ Received led will flash.
 
 Others:
 If player want to set unavailable led(The led is setted or received),when press the navigational switch push, the led will not flash on another player's board.
+
+
+
 
 
 
