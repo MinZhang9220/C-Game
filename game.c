@@ -1,7 +1,7 @@
 /** @file   game.c
     @author Min Zhang & Bill Liu
     @date   8 Oct 2018
-    @brief  Main game
+    @brief  Connect four game,winner is the first player to get an unbroken row of four leds horizontally,vertically,or diagonally.
 */
 
 
@@ -16,78 +16,24 @@
 #include "gridmatrixinfor.h"
 #include "preCharandIndex.h"
 #include "pio.h"
-
 #include <avr/io.h>
-
 #include <stdio.h>
 
 #define PACER_RATE 500
 #define MESSAGE_RATE 10
-#define GRID_NUMBER 35
 
-#define PIEZO1_PIO PIO_DEFINE (PORT_D, 4)
-#define PIEZO2_PIO PIO_DEFINE (PORT_D, 6)
-#define TUNZ_F 440
-#define LOOP_RATE (TUNZ_F * 2)
 
-/* This needs to be fast enough to prevent the eye noticing flicker.
-   A lower value (say 5) is useful for flashing pixels.  */
+
+
+/* Set duty cycle is 10%. Set max setp 100,set luminance setp is 10.*/
 #define LUMINANCE_STEP 10
+static uint8_t pwm_tick = 0; /*Initialize the max setp is 0.*/
 
 
+/*Player's sequence is 1,the player can choose and set led.'*/
 static uint8_t sequence = 1;
-static uint8_t pwm_tick = 0;
 
-
-static Grid matrix_grid[35] = {
-    {.column = 0, .row = 0, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 1, .row = 0, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 2, .row = 0, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 3, .row = 0, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 4, .row = 0, .setted = 0, .received = 0, .navswitched = 0},
-
-
-    {.column = 0, .row = 1, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 1, .row = 1, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 2, .row = 1, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 3, .row = 1, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 4, .row = 1, .setted = 0, .received = 0, .navswitched = 0},
-
-    {.column = 0, .row = 2, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 1, .row = 2, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 2, .row = 2, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 3, .row = 2, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 4, .row = 2, .setted = 0, .received = 0, .navswitched = 0},
-
-
-    {.column = 0, .row = 3, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 1, .row = 3, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 2, .row = 3, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 3, .row = 3, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 4, .row = 3, .setted = 0, .received = 0, .navswitched = 0},
-
-
-    {.column = 0, .row = 4, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 1, .row = 4, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 2, .row = 4, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 3, .row = 4, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 4, .row = 4, .setted = 0, .received = 0, .navswitched = 0},
-
-    {.column = 0, .row = 5, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 1, .row = 5, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 2, .row = 5, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 3, .row = 5, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 4, .row = 5, .setted = 0, .received = 0, .navswitched = 0},
-
-
-
-    {.column = 0, .row = 6, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 1, .row = 6, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 2, .row = 6, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 3, .row = 6, .setted = 0, .received = 0, .navswitched = 0},
-    {.column = 4, .row = 6, .setted = 0, .received = 0, .navswitched = 0}
-
-};
+static Grid* matrix_grid;
 
 /** display character on the matrex
     @param character
@@ -102,8 +48,7 @@ void display_character (char character)
 }
 
 /** display the led for both player.
- * LED displayed by one player shows static on one's own board but flashing on another's board
-*/
+ *  LED displayed by one player shows static on one's own board but flashing on another's board*/
 
 void display_matrix(void)
 {
@@ -132,7 +77,6 @@ void display_matrix(void)
     }
 
     pwm_tick++;
-
     if (pwm_tick >= 100) {
         pwm_tick = 0;
     }
@@ -150,19 +94,15 @@ int main (void)
     ir_uart_init();
     pacer_init (PACER_RATE);
 
-    pio_config_set (PIEZO1_PIO, PIO_OUTPUT_LOW);
-    pio_config_set (PIEZO2_PIO, PIO_OUTPUT_HIGH);
-
-
 
     uint8_t current_row = 0;
     uint8_t current_column = 0;
     uint8_t continue_flag = 1;
     uint8_t win_flag = 0;
-
-
+    matrix_grid = initialize_matrix_grid();
     char character;
 
+    /*Initialize the blue led.The led will light when game over.*/
     DDRC |= (1<<2);
 
 
@@ -174,14 +114,12 @@ int main (void)
         navswitch_update ();
 
 
-
-
         if (continue_flag) {
-            //Game is not over,display the grid
+            /*Game is not over,display the grid*/
 
             display_matrix();
 
-            /*Find current row and col which can be setted*/
+            /*Light current row and col which can be setted*/
 
             tinygl_draw_point(tinygl_point(current_column,current_row),1);
 
@@ -197,8 +135,6 @@ int main (void)
                 uint8_t grid_i = current_row * 5 + current_column;
                 if (matrix_grid[grid_i].setted == 0) {
                     tinygl_draw_point(tinygl_point(current_column,current_row),1);
-                } else {
-                    /*give some sounds*/
                 }
 
             }
@@ -217,9 +153,7 @@ int main (void)
                 uint8_t grid_i = current_row * 5 + current_column;
                 if (matrix_grid[grid_i].setted == 0) {
                     tinygl_draw_point(tinygl_point(current_column,current_row),1);
-                } else {
-                    /*give some sounds*/;
-                }
+                } 
 
             }
 
@@ -234,8 +168,6 @@ int main (void)
                 uint8_t grid_i =  current_row * 5 + current_column;;
                 if (matrix_grid[grid_i].setted == 0) {
                     tinygl_draw_point(tinygl_point(current_column,current_row),1);
-                } else {
-                    /*give some sounds*/;
                 }
             }
 
@@ -250,15 +182,11 @@ int main (void)
                 uint8_t grid_i = current_row * 5 + current_column;;
                 if (matrix_grid[grid_i].setted == 0) {
                     tinygl_draw_point(tinygl_point(current_column,current_row),1);
-                } else {
-                    /*give some sounds*/;
-                }
+                } 
             }
 
             if (navswitch_push_event_p(NAVSWITCH_PUSH)) {
 
-                pio_output_toggle(PIEZO1_PIO);
-                pio_output_toggle(PIEZO2_PIO);
 
                 uint8_t grid_i = current_row * 5 + current_column;
                 /** Get character which will be send to another player.
